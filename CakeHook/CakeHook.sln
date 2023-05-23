@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31702.278
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CakeHook", "CakeHook.vcxproj", "{2BB0E20C-2382-4B70-8496-D095090E5B91}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "2KCustomDLL", "..\WWE_CustomDLL\2kCustomDLL\2kCustomDLL.vcxproj", "{3A0BB475-BBE7-4D46-A071-5D86285A5DF8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2BB0E20C-2382-4B70-8496-D095090E5B91}.Debug|x64.ActiveCfg = Debug|x64
+		{2BB0E20C-2382-4B70-8496-D095090E5B91}.Debug|x86.ActiveCfg = Debug|Win32
+		{2BB0E20C-2382-4B70-8496-D095090E5B91}.Debug|x86.Build.0 = Debug|Win32
+		{2BB0E20C-2382-4B70-8496-D095090E5B91}.Release|x64.ActiveCfg = Release|x64
+		{2BB0E20C-2382-4B70-8496-D095090E5B91}.Release|x64.Build.0 = Release|x64
+		{2BB0E20C-2382-4B70-8496-D095090E5B91}.Release|x86.ActiveCfg = Release|Win32
+		{2BB0E20C-2382-4B70-8496-D095090E5B91}.Release|x86.Build.0 = Release|Win32
+		{3A0BB475-BBE7-4D46-A071-5D86285A5DF8}.Debug|x64.ActiveCfg = Debug|x64
+		{3A0BB475-BBE7-4D46-A071-5D86285A5DF8}.Debug|x86.ActiveCfg = Debug|Win32
+		{3A0BB475-BBE7-4D46-A071-5D86285A5DF8}.Debug|x86.Build.0 = Debug|Win32
+		{3A0BB475-BBE7-4D46-A071-5D86285A5DF8}.Release|x64.ActiveCfg = Release|x64
+		{3A0BB475-BBE7-4D46-A071-5D86285A5DF8}.Release|x64.Build.0 = Release|x64
+		{3A0BB475-BBE7-4D46-A071-5D86285A5DF8}.Release|x86.ActiveCfg = Release|Win32
+		{3A0BB475-BBE7-4D46-A071-5D86285A5DF8}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {15823D72-CCCF-44DD-94EB-94EC4602BA5B}
+	EndGlobalSection
+EndGlobal
