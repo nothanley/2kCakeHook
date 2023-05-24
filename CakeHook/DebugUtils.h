@@ -106,6 +106,31 @@ class DebugUtils {
             return files;
         }
 
+        static std::vector<std::string> FindModFiles(const std::string& directoryPath)
+        {
+            std::vector<std::string> files;
+
+            // Iterate over the files in the directory
+            for (const auto& entry : std::filesystem::directory_iterator(directoryPath))
+            {
+                if (std::filesystem::is_regular_file(entry))
+                {
+                    std::string filename = entry.path().filename().string();
+                    std::transform(filename.begin(), filename.end(), filename.begin(), ::tolower); // Convert to lowercase
+                    if (filename.find(".cak") != std::string::npos)
+                        files.push_back(filename);
+                }
+            }
+
+            return files;
+        }
+
+        static bool DirectoryExists(const std::string& directoryPath)
+        {
+            std::filesystem::path path(directoryPath);
+            return std::filesystem::exists(path) && std::filesystem::is_directory(path);
+        }
+
 
         static std::string GetDllDirectory()
         {
@@ -139,11 +164,32 @@ class DebugUtils {
                 trimmedFilename.erase(trimmedFilename.length() - 4);
                 int value = std::stoi(trimmedFilename);
 
-                if (file.size() <= 16 && value >= index)
-                    paths.push_back(file);
+                if (!(index == 51 && value > 59)) {
+                    if (file.size() <= 16 && value >= index)
+                        paths.push_back(file);
+                }
             }
 
             return paths;
         };
+
+
+        static DWORD WINAPI MessageBoxThread(LPVOID lpParam)
+        {
+            const char* message = static_cast<const char*>(lpParam);
+            MessageBoxA(NULL, message, "CakeHook", MB_OK | MB_SETFOREGROUND);
+
+            return 0;
+        }
+
+        static void ShowMessageBoxNonBlocking(const char* message)
+        {
+            DWORD threadId;
+            HANDLE threadHandle = CreateThread(NULL, 0, MessageBoxThread, const_cast<char*>(message), 0, &threadId);
+            if (threadHandle != NULL)
+            {
+                CloseHandle(threadHandle);
+            }
+        }
 
 };
