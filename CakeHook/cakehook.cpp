@@ -19,7 +19,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 	switch (ul_reason_for_call)
 	{
 		case DLL_PROCESS_ATTACH:
-			//MessageBox(NULL, L"CakeHook Loaded", L"CakeHook", MB_OK | MB_SETFOREGROUND);
+			break;
 		case DLL_PROCESS_DETACH:
 			break;
 		case DLL_THREAD_ATTACH:
@@ -30,7 +30,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 	return TRUE;
 }
 
-static void mergeRegistry( std::string directory, uintptr_t baseAddress, _LoadBakedFileAtPath loadFile) {
+static void mergeRegistry( std::string directory, uintptr_t baseAddress,
+	_LoadBakedFileAtPath loadFile, bool suppressPrompts) {
 	
 	std::vector<std::string> loadedFiles;
 	std::vector<std::string> filePaths = DebugUtils::FindModFiles(directory);
@@ -61,15 +62,15 @@ static void mergeRegistry( std::string directory, uintptr_t baseAddress, _LoadBa
 
 	//Log to Window
 	std::string fLog = "";
-	for (const auto& file : filePaths) {fLog += ("\n" + file);}
+	for (const std::string& file : loadedFiles) {fLog += ("\n" + file);}
 
-	if (fLog != "") {
-		std::string log = ("Loaded Mod File(s): " + fLog);
-		DebugUtils::ShowMessageBoxNonBlocking(log.c_str());	}
+	if (loadedFiles.size() != 0 && !suppressPrompts) {
+		std::string log = ("Loaded Mod File(s): \n" + fLog);
+		DebugUtils::ShowMessageBoxNonBlocking(log);	}
 
 }
 
-static void mergeRegistriesUsingPath( std::string subDir ) {
+static void mergeRegistriesUsingPath(std::string subDir, bool suppressPrompts) {
 	uintptr_t modBase = (uintptr_t)GetModuleHandle(NULL);
 
 	//Check if folder exists
@@ -79,12 +80,12 @@ static void mergeRegistriesUsingPath( std::string subDir ) {
 	{
 		//Define func
 		LoadBakedFileAtPath = (_LoadBakedFileAtPath)(modBase + 0x282330);
-		mergeRegistry(subDir, modBase, LoadBakedFileAtPath);
+		mergeRegistry(subDir, modBase, LoadBakedFileAtPath, suppressPrompts);
 
 	}
 }
 
-static void mergeRegistriesAtIndex( int index ) {
+static void mergeRegistriesAtIndex( int index , bool suppressPrompts) {
 	uintptr_t modBase = (uintptr_t)GetModuleHandle(NULL);
 
 	//define func ptr
@@ -105,20 +106,21 @@ static void mergeRegistriesAtIndex( int index ) {
 	paths = DebugUtils::findbFilesWithinRange(bakedFileIndex, paths);
 	std::string logA = "";
 
-	for (const auto& path : paths) {logA += "\n" + path;}
+	for (const std::string& path : paths) {logA += "\n" + path;}
 
 	//Log
-	if (logA != "") {
-		std::string log = ("Loaded BakedFile(s): " + logA);
-		DebugUtils::ShowMessageBoxNonBlocking(log.c_str());		}
+	if (logA != "" && !suppressPrompts) {
+		std::string log = ("Loaded BakedFile(s): \n" + logA);
+		DebugUtils::ShowMessageBoxNonBlocking(log);		}
 
 	delete[] bfPtr;
 }
 
-static void loadAllRegistries() {
-	mergeRegistriesAtIndex(51); /*Skips 50 so "LOW" setting are preserved if set*/
-	mergeRegistriesAtIndex(80);
-	mergeRegistriesUsingPath("Mods/");
+static void loadAllRegistries(bool suppressPrompts) {
+	mergeRegistriesAtIndex(51, suppressPrompts); /*Skips 50 so "LOW" setting are preserved if set*/
+	mergeRegistriesAtIndex(61, suppressPrompts);
+	mergeRegistriesAtIndex(80, suppressPrompts);
+	mergeRegistriesUsingPath("Mods/", suppressPrompts);
 }
 
 static bool checkRegistryStatus() {
@@ -127,13 +129,47 @@ static bool checkRegistryStatus() {
 	DWORD bFile60_RegKey;
 
 	//Traverse Pointers to key
-	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(modBase+0x035932F0),&baseAddress, sizeof(baseAddress), NULL);
-	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(baseAddress+0x68), &baseAddress, sizeof(baseAddress), NULL);
+	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(modBase+0x04344430),&baseAddress, sizeof(baseAddress), NULL);
+	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(baseAddress+0x58), &baseAddress, sizeof(baseAddress), NULL);
 	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(baseAddress+0xB0), &bFile60_RegKey, sizeof(bFile60_RegKey), NULL);
 
 	/* If our key doesn't match, we can't be certain any addresses will match.
 		therefore, we won't execute any methods while this value is a mismatch! */
 	return bFile60_RegKey == 0x4ACA5C90;
+}
+
+static bool checkExecutableVersion() {
+	uint32_t exeCRC = DebugUtils::getExeCRC();
+
+	std::wstring log = DebugUtils::string_to_wchar(
+		std::to_string(exeCRC));
+
+	//Validate 2k23 exe as either patched or original
+	if ( exeCRC == /*Patched .EXE CRC*/ 3163580724 || 
+				  /*Original .EXE CRC*/ exeCRC == 122261595) {
+		return true;	}
+
+	//EXE is old or incompatible
+	return false;
+}
+
+static bool checkPatched() {
+	// Pointer is sometimes unreliable but our fallback is CRC
+	bool isValidProcess = checkRegistryStatus();
+
+	//Patch if valid
+	if (isValidProcess) {
+		loadAllRegistries(true);
+		return true;
+	}
+
+	//Not patched/invalid exe
+	return false;
+}
+
+void loadRegistryStartupThread() {
+	Sleep(2000); //Wait for EXE to init
+	loadAllRegistries(true); //Patches and loads CAKs
 }
 
 extern "C" __declspec(dllexport) void cake_main() {
@@ -143,19 +179,27 @@ extern "C" __declspec(dllexport) void cake_main() {
 
 		bool isPatched = false;
 		bool isValidProcess = true;
+		bool isLatestVersion = checkExecutableVersion();
+
+		std::thread cakStartupLoader( loadRegistryStartupThread );
+		cakStartupLoader.detach();
+
 		while (true)
 		{
-			isValidProcess = checkRegistryStatus();
-			if (isValidProcess) {
+			if (isLatestVersion) {
 
-				//Patch check
-				if (!isPatched){ loadAllRegistries(); isPatched = true; };
+				if (!isPatched)
+					isPatched = checkPatched();
 
-				//Merge BakedFile80+
-				if (GetAsyncKeyState(VK_F9) & 0x8000){ mergeRegistriesAtIndex(80); }
+				//Merge BakedFile50+ BakedFile80+
+				if (GetAsyncKeyState(VK_F9) & 0x8000){ 
+					mergeRegistriesAtIndex(51, false);
+					mergeRegistriesAtIndex(61, false);
+					mergeRegistriesAtIndex(80, false);
+				}
 
 				//Merge Mods
-				if (GetAsyncKeyState(VK_F11) & 0x8000){ mergeRegistriesUsingPath("Mods/"); }
+				if (GetAsyncKeyState(VK_F11) & 0x8000){ mergeRegistriesUsingPath("Mods/", false); }
 
 
 				Sleep(100);

@@ -7,11 +7,40 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include "crc32.h"
+#include <fstream>
 #pragma once
 
+//This is a static collection of helper functions
 class DebugUtils {
 
     public:
+
+        static uint32_t getExeCRC() {
+            std::string filePath = GetExecutableFilePath();
+            uint32_t fileCRC = getFileCRC(filePath);
+
+            return fileCRC;
+        }
+
+        static uint32_t getFileCRC(std::string path) {
+            std::ifstream inFile(path, std::ios_base::binary);
+            if (!inFile.is_open()) {
+                std::cerr << "Failed to open file: " << path << std::endl;
+                return 0;
+            }
+
+            inFile.seekg(0, std::ios_base::end);
+            size_t length = inFile.tellg();
+            inFile.seekg(0, std::ios_base::beg);
+
+            std::vector<char> buffer(length);
+            inFile.read(buffer.data(), length);
+            inFile.close();
+
+            uint32_t crc32 = crc32_bitwise( buffer.data(), buffer.size(), 0);
+            return crc32;
+        }
 
         static wchar_t* string_to_wchar(std::string narrow_string) {
 
@@ -19,6 +48,15 @@ class DebugUtils {
             wchar_t* wStr = new wchar_t[wchars_num];
             MultiByteToWideChar(CP_UTF8, 0, narrow_string.c_str(), -1, wStr, (wchars_num));
             return wStr;
+        }
+
+        static std::string GetExecutableFilePath()
+        {
+            char path[MAX_PATH];
+            GetModuleFileNameA(NULL, path, MAX_PATH);
+            //MessageBox(NULL, string_to_wchar( std::string(path) ), L"CakeHook", MB_OK | MB_SETFOREGROUND);
+
+            return std::string(path);
         }
 
         static void PrintToConsole( HANDLE hConsoleOutput, const wchar_t* format, ...)
@@ -176,16 +214,20 @@ class DebugUtils {
 
         static DWORD WINAPI MessageBoxThread(LPVOID lpParam)
         {
-            const char* message = static_cast<const char*>(lpParam);
+            char* message = static_cast<char*>(lpParam);
             MessageBoxA(NULL, message, "CakeHook", MB_OK | MB_SETFOREGROUND);
+            delete[] message;
 
             return 0;
         }
 
-        static void ShowMessageBoxNonBlocking(const char* message)
+        static void ShowMessageBoxNonBlocking( std::string paths)
         {
+            char* messageBuffer = new char[paths.size() + 1];
+            strcpy_s(messageBuffer, paths.size() + 1, paths.c_str());
+
             DWORD threadId;
-            HANDLE threadHandle = CreateThread(NULL, 0, MessageBoxThread, const_cast<char*>(message), 0, &threadId);
+            HANDLE threadHandle = CreateThread(NULL, 0, MessageBoxThread, messageBuffer, 0, &threadId);
             if (threadHandle != NULL)
             {
                 CloseHandle(threadHandle);
