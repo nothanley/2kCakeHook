@@ -79,7 +79,7 @@ static void mergeRegistriesUsingPath(std::string subDir, bool suppressPrompts) {
 	if (hasMods)
 	{
 		//Define func
-		LoadBakedFileAtPath = (_LoadBakedFileAtPath)(modBase + 0x282330);
+		LoadBakedFileAtPath = (_LoadBakedFileAtPath)(modBase + 0x282FF0);
 		mergeRegistry(subDir, modBase, LoadBakedFileAtPath, suppressPrompts);
 
 	}
@@ -89,7 +89,7 @@ static void mergeRegistriesAtIndex( int index , bool suppressPrompts) {
 	uintptr_t modBase = (uintptr_t)GetModuleHandle(NULL);
 
 	//define func ptr
-	LoadBakedFilesUC = (_LoadBakedFilesUC)(modBase + 0x281ED0);
+	LoadBakedFilesUC = (_LoadBakedFilesUC)(modBase + 0x282B90);
 
 	//Adjust this
 	uint16_t bakedFileIndex = index;
@@ -129,8 +129,8 @@ static bool checkRegistryStatus() {
 	DWORD bFile60_RegKey;
 
 	//Traverse Pointers to key
-	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(modBase+0x04344430),&baseAddress, sizeof(baseAddress), NULL);
-	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(baseAddress+0x58), &baseAddress, sizeof(baseAddress), NULL);
+	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(modBase+0x036D3930),&baseAddress, sizeof(baseAddress), NULL);
+	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(baseAddress+0x68), &baseAddress, sizeof(baseAddress), NULL);
 	ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(baseAddress+0xB0), &bFile60_RegKey, sizeof(bFile60_RegKey), NULL);
 
 	/* If our key doesn't match, we can't be certain any addresses will match.
@@ -144,9 +144,12 @@ static bool checkExecutableVersion() {
 	std::wstring log = DebugUtils::string_to_wchar(
 		std::to_string(exeCRC));
 
+	//std::string log = ("Loaded BakedFile(s): \n" + logA);
+	//DebugUtils::ShowMessageBoxNonBlocking(std::to_string(exeCRC));
+
 	//Validate 2k23 exe as either patched or original
-	if ( exeCRC == /*Patched .EXE CRC*/ 3163580724 || 
-				  /*Original .EXE CRC*/ exeCRC == 122261595) {
+	if ( exeCRC == /*Patched .EXE CRC*/ 825834769 || 
+				  /*Original .EXE CRC*/ exeCRC == 2732623784) {
 		return true;	}
 
 	//EXE is old or incompatible
